@@ -2,66 +2,90 @@ using UnityEngine;
 
 public class Player_Control : MonoBehaviour
 {
+    [Header("Movement Settings")]
     public float moveSpeed = 5f;
-    public float jumpForce = 7f;      // how strong the jump is
-    public float gravity = 4f;       // how fast player falls
+    public float jumpForce = 7f;
+    public float gravity = 4f;
+
+    [Header("Mouse Settings")]
+    public float mouseSensitivity = 2f;
+    public Transform playerCamera;
+
+    [Header("Respawn Settings")]
     public Transform respawnPoint;
 
     private CharacterController controller;
     private Vector3 moveDirection = Vector3.zero;
+    private float xRotation = 0f;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()
     {
-        // Only set XZ movement when grounded
+        HandleMovement();
+        HandleMouseLook();
+        HandleRespawn();
+    }
+
+    void HandleMovement()
+    {
         if (controller.isGrounded)
         {
             float moveX = 0f;
             float moveZ = 0f;
 
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
-                moveX = -1f;
-
+                moveZ = 1f;
             if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+                moveZ = -1f;
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+                moveX = -1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
                 moveX = 1f;
 
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
-                moveZ = -1f;
+            // Move relative to where the player is facing
+            Vector3 move = transform.right * moveX + transform.forward * moveZ;
+            moveDirection = move * moveSpeed;
 
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
-                moveZ = 1f;
-
-            // Movement direction (XZ plane)
-            moveDirection = new Vector3(moveX, 0, moveZ).normalized * moveSpeed;
-
-            // Jump input
+            // Jump
             if (Input.GetKeyDown(KeyCode.Space))
-            {
                 moveDirection.y = jumpForce;
-            }
         }
 
-        // Apply gravity always
+        // Apply gravity
         moveDirection.y -= gravity * Time.deltaTime;
 
-        // Move player
+        // Apply movement
         controller.Move(moveDirection * Time.deltaTime);
-
-        // Respawn if player falls off stage
-        if (transform.position.y < -5f)
-        {
-            Respawn();
-        }
     }
 
-    void Respawn()
+    void HandleMouseLook()
     {
-        controller.enabled = false; // disable before teleporting
-        transform.position = respawnPoint.position;
-        controller.enabled = true;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+
+        // Rotate the player (left/right)
+        transform.Rotate(Vector3.up * mouseX);
+
+        // Rotate the camera (up/down)
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -80f, 80f);
+
+        playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+    }
+
+    void HandleRespawn()
+    {
+        if (transform.position.y < -5f)
+        {
+            controller.enabled = false;
+            transform.position = respawnPoint.position;
+            controller.enabled = true;
+        }
     }
 }
