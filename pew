@@ -1,0 +1,74 @@
+using UnityEngine;
+
+public class PlayerShooter : MonoBehaviour
+{
+    [Header("Orbit Settings")]
+    public Transform orbitPoint; // center point (usually player or camera)
+    public Transform redBall;
+    public Transform blueBall;
+    public float orbitDistance = 2f;
+    public float orbitSpeed = 60f;
+
+    [Header("Bullet Settings")]
+    public GameObject redBulletPrefab;
+    public GameObject blueBulletPrefab;
+    public Transform firePoint;
+    public float bulletSpeed = 20f;
+
+    [Header("Player Visuals")]
+    public Renderer playerRenderer;
+    public Material redMaterial;
+    public Material blueMaterial;
+
+    private bool isRedActive = true;
+    private float orbitAngle = 0f;
+
+    void Update()
+    {
+        // Orbit rotation
+        orbitAngle += orbitSpeed * Time.deltaTime;
+        UpdateOrbitPositions();
+
+        // Switch bullet type
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            isRedActive = !isRedActive;
+            UpdatePlayerColor();
+        }
+
+        // Shoot
+        if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
+        {
+            Shoot();
+        }
+    }
+
+    void UpdateOrbitPositions()
+    {
+        float angleOffset = 180f;
+
+        // Red ball orbit position
+        Vector3 redPos = orbitPoint.position + Quaternion.Euler(0, orbitAngle, 0) * Vector3.forward * orbitDistance;
+        redBall.position = redPos;
+
+        // Blue ball orbit opposite
+        Vector3 bluePos = orbitPoint.position + Quaternion.Euler(0, orbitAngle + angleOffset, 0) * Vector3.forward * orbitDistance;
+        blueBall.position = bluePos;
+    }
+
+    void UpdatePlayerColor()
+    {
+        if (playerRenderer != null)
+            playerRenderer.material = isRedActive ? redMaterial : blueMaterial;
+    }
+
+    void Shoot()
+    {
+        GameObject bulletPrefab = isRedActive ? redBulletPrefab : blueBulletPrefab;
+        GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+
+        BulletMover mover = bullet.AddComponent<BulletMover>();
+        mover.speed = bulletSpeed;
+        mover.lifeTime = 3f;
+    }
+}
