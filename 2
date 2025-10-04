@@ -1,0 +1,67 @@
+using UnityEngine;
+
+public class Player_Control : MonoBehaviour
+{
+    public float moveSpeed = 5f;
+    public float jumpForce = 7f;      // how strong the jump is
+    public float gravity = 20f;       // how fast player falls
+    public Transform respawnPoint;
+
+    private CharacterController controller;
+    private Vector3 moveDirection = Vector3.zero;
+
+    void Start()
+    {
+        controller = GetComponent<CharacterController>();
+    }
+
+    void Update()
+    {
+        // Only set XZ movement when grounded
+        if (controller.isGrounded)
+        {
+            float moveX = 0f;
+            float moveZ = 0f;
+
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+                moveZ = 1f;
+
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+                moveZ = -1f;
+
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+                moveX = -1f;
+
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+                moveX = 1f;
+
+            // Movement direction (XZ plane)
+            moveDirection = new Vector3(moveX, 0, moveZ).normalized * moveSpeed;
+
+            // Jump input
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                moveDirection.y = jumpForce;
+            }
+        }
+
+        // Apply gravity always
+        moveDirection.y -= gravity * Time.deltaTime;
+
+        // Move player
+        controller.Move(moveDirection * Time.deltaTime);
+
+        // Respawn if player falls off stage
+        if (transform.position.y < -5f)
+        {
+            Respawn();
+        }
+    }
+
+    void Respawn()
+    {
+        controller.enabled = false; // disable before teleporting
+        transform.position = respawnPoint.position;
+        controller.enabled = true;
+    }
+}
