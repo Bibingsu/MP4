@@ -1,0 +1,73 @@
+using UnityEngine;
+
+public class WallTarget : MonoBehaviour
+{
+    public Material redMaterial;
+    public Material blueMaterial;
+    public GameObject door;        // assign the door object in Inspector
+    public float doorMoveDistance = 5f; // how far the door slides
+    public float doorMoveSpeed = 2f;    // how fast it slides
+
+    private string currentColor = "Red"; 
+    private int hitCount = 0;
+    private bool doorOpening = false;
+    private Vector3 doorStartPos;
+    private Vector3 doorTargetPos;
+
+    void Start()
+    {
+        // Save door's start position
+        if (door != null)
+            doorStartPos = door.transform.position;
+
+        // Start color switcher
+        InvokeRepeating("SwitchColor", 1f, 1f); // every second
+    }
+
+    void SwitchColor()
+    {
+        if (Random.value > 0.5f)
+        {
+            currentColor = "Red";
+            GetComponent<Renderer>().material = redMaterial;
+        }
+        else
+        {
+            currentColor = "Blue";
+            GetComponent<Renderer>().material = blueMaterial;
+        }
+    }
+
+    public void HitByBullet(string bulletColor)
+    {
+        if (bulletColor == currentColor)
+        {
+            hitCount++;
+            Debug.Log("Correct hit! Count = " + hitCount);
+
+            if (hitCount >= 3 && !doorOpening)
+            {
+                Debug.Log("Door opening!");
+                doorOpening = true;
+                doorTargetPos = doorStartPos + door.transform.forward * doorMoveDistance;
+            }
+        }
+        else
+        {
+            Debug.Log("Wrong color, reset hits.");
+            hitCount = 0; // reset progress if wrong color
+        }
+    }
+
+    void Update()
+    {
+        if (doorOpening && door != null)
+        {
+            door.transform.position = Vector3.MoveTowards(
+                door.transform.position,
+                doorTargetPos,
+                doorMoveSpeed * Time.deltaTime
+            );
+        }
+    }
+}
