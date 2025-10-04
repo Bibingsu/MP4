@@ -1,0 +1,62 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using System.Collections;
+
+public class Gunshooter : MonoBehaviour
+{
+    [SerializeField] private InputAction gunshooting;
+    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private Transform bulletSpawnPoint;
+
+    [Header("Bullet Settings")]
+    [SerializeField] private int ammoSize = 12;
+    [SerializeField] private float reloadTime = 2f;
+
+    private int currentBullets;
+    private bool isReloading;
+
+    private void Start()
+    {
+        currentBullets = ammoSize;
+        gunshooting.performed += OnShoot;
+    }
+
+    private void OnEnable()
+    {
+        gunshooting.Enable();
+    }
+
+    private void OnDisable()
+    {
+        gunshooting.Disable();
+    }
+
+    private void OnShoot(InputAction.CallbackContext context)
+    {
+        if (isReloading) return;
+
+        if (currentBullets > 0)
+        {
+            Instantiate(bulletPrefab, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
+            currentBullets--;
+            Debug.Log($"Bullet: {currentBullets}/{ammoSize}");
+
+            if (currentBullets <= 0)
+            {
+                StartCoroutine(ReloadCoroutine());
+            }
+        }
+    }
+
+    private IEnumerator ReloadCoroutine()
+    {
+        isReloading = true;
+        Debug.Log("Reloading...");
+
+        yield return new WaitForSeconds(reloadTime);
+
+        currentBullets = ammoSize;
+        isReloading = false;
+        Debug.Log($"Bullet: {currentBullets}/{ammoSize}");
+    }
+}
