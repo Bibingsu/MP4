@@ -3,33 +3,65 @@ using UnityEngine;
 public class Player_Control : MonoBehaviour
 {
     public float moveSpeed = 5f;
-    public float mouseSensitivity = 2f;
-    public Transform playerCamera;
+    public float jumpForce = 7f;      // how strong the jump is
+    public float gravity = 4f;       // how fast player falls
     public Transform respawnPoint;
 
-    private float xRotation = 0f;
+    private CharacterController controller;
+    private Vector3 moveDirection = Vector3.zero;
 
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
+        controller = GetComponent<CharacterController>();
     }
 
     void Update()
     {
-        // --- Movement ---
-        float moveX = Input.GetAxis("Horizontal");
-        float moveZ = Input.GetAxis("Vertical");
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        transform.Translate(move * moveSpeed * Time.deltaTime, Space.World);
+        // Only set XZ movement when grounded
+        if (controller.isGrounded)
+        {
+            float moveX = 0f;
+            float moveZ = 0f;
 
-        // --- Rotation (Left/Right) ---
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        transform.Rotate(Vector3.up * mouseX);
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+                moveX = -1f;
 
-        // --- Respawn check ---
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+                moveX = 1f;
+
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+                moveZ = -1f;
+
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+                moveZ = 1f;
+
+            // Movement direction (XZ plane)
+            moveDirection = new Vector3(moveX, 0, moveZ).normalized * moveSpeed;
+
+            // Jump input
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                moveDirection.y = jumpForce;
+            }
+        }
+
+        // Apply gravity always
+        moveDirection.y -= gravity * Time.deltaTime;
+
+        // Move player
+        controller.Move(moveDirection * Time.deltaTime);
+
+        // Respawn if player falls off stage
         if (transform.position.y < -5f)
         {
-            transform.position = respawnPoint.position;
+            Respawn();
         }
+    }
+
+    void Respawn()
+    {
+        controller.enabled = false; // disable before teleporting
+        transform.position = respawnPoint.position;
+        controller.enabled = true;
     }
 }
