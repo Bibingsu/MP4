@@ -1,0 +1,9 @@
+using UnityEngine;
+
+public static class GameSettings
+{
+    public static int hitsToDestroy = 2;
+    public static int numberOfTargets = 2;
+    public static Color targetColor = Color.white;
+    public static string playerName = "Player";
+}
