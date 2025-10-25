@@ -1,91 +1,44 @@
 using UnityEngine;
 
-public class PlayerController: MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    public float moveSpeed = 5f;
-    public float jumpForce = 7f;
-    public float gravity = 4f;
+    public float moveSpeed = 6f;
+    public float jumpHeight = 2f;
+    public float gravity = -9.81f;
 
-    [Header("Mouse Settings")]
-    public float mouseSensitivity = 5f;
-    public Transform playerCamera;
-
-    [Header("Respawn Settings")]
-    public Transform respawnPoint;
-
-    private CharacterController controller;
-    private Vector3 moveDirection = Vector3.zero;
-    private float xRotation = 0f;
+    CharacterController controller;
+    Vector3 velocity;
+    bool isGrounded;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
     }
 
     void Update()
     {
-        HandleMovement();
-        HandleMouseLook();
-        HandleRespawn();
-    }
-
-    void HandleMovement()
-    {
-        if (controller.isGrounded)
+        // Check if grounded
+        isGrounded = controller.isGrounded;
+        if (isGrounded && velocity.y < 0)
         {
-            float moveX = 0f;
-            float moveZ = 0f;
+            velocity.y = -2f; // Small push to keep grounded
+        }
 
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
-                moveZ = 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
-                moveZ = -1f;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
-                moveX = -1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
-                moveX = 1f;
+        // Get input (WASD / Arrow Keys)
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
 
-            // Move relative to where the player is facing
-            Vector3 move = transform.right * moveX + transform.forward * moveZ;
-            moveDirection = move * moveSpeed;
+        Vector3 move = transform.right * x + transform.forward * z;
+        controller.Move(move * moveSpeed * Time.deltaTime);
 
-            // Jump
-            if (Input.GetKeyDown(KeyCode.Space))
-                moveDirection.y = jumpForce;
+        // Jump
+        if (Input.GetButtonDown("Jump") && isGrounded)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
         // Apply gravity
-        moveDirection.y -= gravity * Time.deltaTime;
-
-        // Apply movement
-        controller.Move(moveDirection * Time.deltaTime);
-    }
-
-    void HandleMouseLook()
-    {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
-
-        // Rotate the player (left/right)
-        transform.Rotate(Vector3.up * mouseX);
-
-        // Rotate the camera (up/down)
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -80f, 80f);
-
-        playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-    }
-
-    void HandleRespawn()
-    {
-        if (transform.position.y < -5f)
-        {
-            controller.enabled = false;
-            transform.position = respawnPoint.position;
-            controller.enabled = true;
-        }
+        velocity.y += gravity * Time.deltaTime;
+        controller.Move(velocity * Time.deltaTime);
     }
 }
