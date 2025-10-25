@@ -1,0 +1,39 @@
+using UnityEngine;
+
+public class Target : MonoBehaviour
+{
+    int hitsRemaining;
+    Vector3 originalScale;
+
+    void Start()
+    {
+        hitsRemaining = GameSettings.hitsToDestroy;
+        GetComponent<Renderer>().material.color = GameSettings.targetColor;
+        originalScale = transform.localScale;
+    }
+
+    public void TakeHit()
+    {
+        hitsRemaining--;
+        transform.localScale *= 0.9f; // Shrink
+
+        if (hitsRemaining <= 0)
+        {
+            GameController.Instance.TargetDestroyed();
+            Destroy(gameObject);
+        }
+    }
+
+    void OnTriggerStay(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            GetComponent<Renderer>().material.color = Color.red;
+        }
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        GetComponent<Renderer>().material.color = GameSettings.targetColor;
+    }
+}
