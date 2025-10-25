@@ -1,49 +1,101 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
-    public float moveSpeed = 6f;
-    public float jumpHeight = 2f;
-    public float gravity = -9.81f;
-    public float groundFriction = 8f; // new!
+    [SerializeField] CharacterController controller;
+    [SerializeField] InputActionAsset inputAction;
+    [SerializeField] GameObject bulletPrefab;
+    [SerializeField] Transform bulletSpawn;
 
-    CharacterController controller;
-    Vector3 velocity;
-    bool isGrounded;
+    private InputAction move, look, attack, reload;
 
-    void Start()
+    [SerializeField] float moveSpeed = 5f;
+    [SerializeField] float lookSpeed = 2f;
+    [SerializeField] float gravity = 9.8f;
+    [SerializeField] float jumpForce = 7f;
+
+    private Vector2 moveInput, lookInput;
+    private Vector3 velocity;
+    private float xRotation = 0f;
+    private int ammo = 12;
+    private Vector3 startPosition;
+
+    private void Start()
     {
-        controller = GetComponent<CharacterController>();
+        startPosition = transform.position;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
-    void Update()
+    private void OnEnable()
     {
-        isGrounded = controller.isGrounded;
+        var map = inputAction.FindActionMap("Player");
+        map.Enable();
 
-        if (isGrounded && velocity.y < 0)
-        {
+        move = map.FindAction("Move");
+        look = map.FindAction("Look");
+        attack = map.FindAction("Attack");
+        reload = map.FindAction("Reload");
+
+        attack.performed += OnShoot;
+        reload.performed += OnReload;
+    }
+
+    private void OnDisable()
+    {
+        inputAction.FindActionMap("Player").Disable();
+    }
+
+    private void FixedUpdate()
+    {
+        if (!GameController.Instance.IsOk)
+            return;
+
+        // Movement
+        moveInput = move.ReadValue<Vector2>();
+        Vector3 moveVec = transform.right * moveInput.x + transform.forward * moveInput.y;
+        controller.Move(moveVec * moveSpeed * Time.deltaTime);
+
+        // Gravity
+        if (controller.isGrounded && velocity.y < 0)
             velocity.y = -2f;
-        }
-
-        float x = Input.GetAxisRaw("Horizontal");
-        float z = Input.GetAxisRaw("Vertical");
-
-        Vector3 move = transform.right * x + transform.forward * z;
-        controller.Move(move * moveSpeed * Time.deltaTime);
-
-        // Apply friction when no movement input
-        if (isGrounded && x == 0 && z == 0)
-        {
-            velocity.x = Mathf.Lerp(velocity.x, 0, groundFriction * Time.deltaTime);
-            velocity.z = Mathf.Lerp(velocity.z, 0, groundFriction * Time.deltaTime);
-        }
-
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
-
-        velocity.y += gravity * Time.deltaTime;
+        velocity.y -= gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+
+        // Looking
+        lookInput = look.ReadValue<Vector2>() * lookSpeed;
+        xRotation -= lookInput.y;
+        xRotation = Mathf.Clamp(xRotation, -80f, 80f);
+        transform.Rotate(Vector3.up * lookInput.x);
+
+        // Respawn
+        if (transform.position.y < -10f)
+            transform.position = startPosition;
+    }
+
+    private void OnShoot(InputAction.CallbackContext ctx)
+    {
+        if (!GameController.Instance.IsOk || ammo <= 0)
+            return;
+
+        Instantiate(bulletPrefab, bulletSpawn.position, bulletSpawn.rotation);
+        ammo--;
+        Debug.Log("Bullet fired! Remaining ammo: " + ammo);
+    }
+
+    private void OnReload(InputAction.CallbackContext ctx)
+    {
+        if (!GameController.Instance.IsOk)
+            return;
+
+        ammo = 12;
+        Debug.Log("Reloaded!");
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.gameObject.name == "finalPlatform")
+            GameController.Instance.FinalPlatformReached();
     }
 }
