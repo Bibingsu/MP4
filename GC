@@ -1,0 +1,174 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+
+public class GameController : MonoBehaviour
+{
+    public static GameController Instance { get; private set; }
+
+    [Header("Game Settings (Menu controlled)")]
+    public int hitsRequired = 2;             // 2,3,4
+    public int numberOfTargets = 2;         // 2,4,6
+    public Color targetColor = Color.white; // set via RGB sliders
+
+    [Header("UI References")]
+    public Text ammoText;
+    public Text playerNameText;
+    public Text gameTimeText;
+
+    [Header("Stage / Prefabs")]
+    public Transform[] targetSpawnPoints;   // populate in inspector with spawn positions
+    public GameObject targetPrefab;
+
+    private float gameTimer = 0f;
+    private bool gameStarted = false;
+    public bool IsOk { get { return gameStarted; } } // used by PlayerController
+    public int Score { get; private set; }
+    public int totalTargets = 0;
+    public string PlayerName { get; private set; } = "";
+
+    private void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+    }
+
+    private void Update()
+    {
+        if (gameStarted)
+        {
+            // increment timer every second shown as whole seconds
+            gameTimer += Time.deltaTime;
+            gameTimeText.text = "Game Time: " + Mathf.FloorToInt(gameTimer).ToString();
+        }
+    }
+
+    public void StartGameWithName(string playerName)
+    {
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            Debug.LogWarning("Player name must be visible and non-empty to start.");
+            return;
+        }
+
+        PlayerName = playerName;
+        playerNameText.text = "Player: " + PlayerName;
+
+        ApplySettingsToStage();
+        gameTimer = 0f;
+        Score = 0;
+        totalTargets = CountExistingTargets();
+        gameStarted = true;
+        Time.timeScale = 1f;
+    }
+
+    public void PauseGame()
+    {
+        gameStarted = false;
+        Time.timeScale = 0f;
+    }
+
+    public void AddScore(int value)
+    {
+        Score += value;
+        Debug.Log("Score: " + Score);
+    }
+
+    public void TargetDestroyed()
+    {
+        totalTargets--;
+        Debug.Log("Target destroyed! Remaining: " + totalTargets);
+        if (totalTargets <= 0)
+        {
+            Debug.Log("All targets destroyed! Player can now move up/down stairs.");
+        }
+    }
+
+    public void UpdateBulletUI(int ammo)
+    {
+        if (ammoText != null)
+            ammoText.text = "Bullets: " + ammo;
+    }
+
+    // Called by MenuController whenever menu values change (immediate reflection)
+    public void SetHitsRequired(int hits)
+    {
+        hitsRequired = hits;
+    }
+
+    public void SetNumberOfTargets(int count)
+    {
+        numberOfTargets = count;
+        // Immediately update stage to reflect count
+        ApplyNumberOfTargetsToStage();
+    }
+
+    public void SetTargetColor(Color col)
+    {
+        targetColor = col;
+        ApplyColorToExistingTargets();
+    }
+
+    // Helper functions
+    private int CountExistingTargets()
+    {
+        return GameObject.FindObjectsOfType<Target>().Length;
+    }
+
+    private void ApplySettingsToStage()
+    {
+        // ensure targets are placed according to numberOfTargets and color/hitsRequired applied
+        ApplyNumberOfTargetsToStage();
+        ApplyColorToExistingTargets();
+
+        // Also set hitsRequired to each existing target if needed
+        foreach (var t in GameObject.FindObjectsOfType<Target>())
+        {
+            t.hitsRequired = hitsRequired;
+        }
+
+        totalTargets = CountExistingTargets();
+    }
+
+    private void ApplyNumberOfTargetsToStage()
+    {
+        // simplistic implementation:
+        // remove existing targets and spawn numberOfTargets from prefab using spawn points
+        foreach (var t in GameObject.FindObjectsOfType<Target>())
+            Destroy(t.gameObject);
+
+        // if not enough spawn points, reuse them cyclically
+        int spawnCount = Mathf.Min(numberOfTargets, targetSpawnPoints.Length);
+        for (int i = 0; i < numberOfTargets; i++)
+        {
+            Transform spawn = targetSpawnPoints[i % targetSpawnPoints.Length];
+            GameObject go = Instantiate(targetPrefab, spawn.position, spawn.rotation);
+            Target t = go.GetComponent<Target>();
+            if (t != null)
+            {
+                t.hitsRequired = hitsRequired;
+                t.SetBaseColor(targetColor);
+            }
+        }
+
+        totalTargets = CountExistingTargets();
+    }
+
+    private void ApplyColorToExistingTargets()
+    {
+        foreach (var t in GameObject.FindObjectsOfType<Target>())
+        {
+            t.SetBaseColor(targetColor);
+        }
+    }
+
+    // Call this from goal object when player reaches it to stop timer
+    public void PlayerReachedGoal()
+    {
+        gameStarted = false;
+        // timer stops because Update checks gameStarted
+        Debug.Log("Player reached goal. Final time: " + Mathf.FloorToInt(gameTimer));
+    }
+}
