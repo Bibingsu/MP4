@@ -2,19 +2,28 @@ using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-    public float speed = 20f;
+    [SerializeField] float speed = 20f;
+    [SerializeField] float lifeTime = 2f;
+    [SerializeField] int damage = 1;
 
-    void Update()
+    private void Start()
+    {
+        Destroy(gameObject, lifeTime);
+    }
+
+    private void Update()
     {
         transform.Translate(Vector3.forward * speed * Time.deltaTime);
     }
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
-        Target target = other.GetComponent<Target>();
-        if (target != null)
+        if (other.CompareTag("Target"))
         {
-            target.TakeHit();
+            Target target = other.GetComponent<Target>();
+            if (target != null)
+                target.TakeDamage(damage);
+
             Destroy(gameObject);
         }
     }
