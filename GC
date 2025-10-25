@@ -1,61 +1,65 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
     public static GameController Instance;
 
-    public bool gameStarted = false;
-    public int totalTargets = 0;
-    public int hitsToDestroy = 2;
+    public bool IsOk { get; private set; } = false;
+    private int totalTargets;
+    private int destroyedTargets;
 
-    public Text playerNameText;
-    public Text bulletText;
-    public Text timerText;
-
-    public PlayerController player;
-    public Transform goal;
-
-    float timer = 0f;
-
-    void Awake()
+    private void Awake()
     {
-        Instance = this;
-        Time.timeScale = 0f; // Game is paused until StartGame is called
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
     }
 
-    void Update()
+    private void Start()
     {
-        if (!gameStarted) return;
-
-        timer += Time.deltaTime;
-        timerText.text = "Time: " + Mathf.FloorToInt(timer).ToString();
+        PauseGameplay();
     }
 
-    public void StartGame(string playerName)
+    public void StartGameplay(int targetCount)
     {
-        playerNameText.text = "Player: " + playerName;
-        gameStarted = true;
+        totalTargets = targetCount;
+        destroyedTargets = 0;
+
+        ResumeGameplay();
         Time.timeScale = 1f;
+
+        Debug.Log("Game started with " + totalTargets + " targets.");
     }
 
     public void TargetDestroyed()
     {
-        totalTargets--;
-        if (totalTargets <= 0)
+        destroyedTargets++;
+        Debug.Log($"Target destroyed! {destroyedTargets}/{totalTargets}");
+
+        if (destroyedTargets >= totalTargets)
         {
-            player.canClimb = true;
+            Debug.Log("All targets destroyed! Player can now move up/down stairs.");
         }
     }
 
-    public void UpdateBullets(int bullets)
+    public void PauseGameplay()
     {
-        bulletText.text = "Bullets: " + bullets;
+        IsOk = false;
+        Time.timeScale = 0f;
+        Debug.Log("Game paused.");
     }
 
-    public void StopGame()
+    public void ResumeGameplay()
     {
-        gameStarted = false;
-        Time.timeScale = 0f;
+        IsOk = true;
+        Time.timeScale = 1f;
+        Debug.Log("Game resumed.");
+    }
+
+    public void FinalPlatformReached()
+    {
+        Debug.Log("Level complete!");
+        PauseGameplay();
     }
 }
