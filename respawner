@@ -1,0 +1,24 @@
+using UnityEngine;
+
+public class PlayerRespawn : MonoBehaviour
+{
+    public Transform respawnPoint;   // The location to respawn at
+
+    void Start()
+    {
+        // fallback: if not assigned, find one
+        if (respawnPoint == null)
+            respawnPoint = GameObject.Find("RespawnPoint").transform;
+    }
+
+    public void Respawn()
+    {
+        transform.position = respawnPoint.position;
+        // optional: reset velocity if using Rigidbody
+        if (TryGetComponent<Rigidbody>(out Rigidbody rb))
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+    }
+}
