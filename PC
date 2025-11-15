@@ -1,101 +1,74 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] CharacterController controller;
-    [SerializeField] InputActionAsset inputAction;
-    [SerializeField] GameObject bulletPrefab;
-    [SerializeField] Transform bulletSpawn;
+    public float moveSpeed = 5f;
+    public float jumpForce = 6f;
 
-    private InputAction move, look, attack, reload;
+    private Rigidbody rb;
+    private bool isGrounded = false;
 
-    [SerializeField] float moveSpeed = 5f;
-    [SerializeField] float lookSpeed = 2f;
-    [SerializeField] float gravity = 9.8f;
-    [SerializeField] float jumpForce = 7f;
+    PlayerRespawn respawn;
 
-    private Vector2 moveInput, lookInput;
-    private Vector3 velocity;
-    private float xRotation = 0f;
-    private int ammo = 12;
-    private Vector3 startPosition;
-
-    private void Start()
+    void Start()
     {
-        startPosition = transform.position;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        rb = GetComponent<Rigidbody>();
+        respawn = GetComponent<PlayerRespawn>();
     }
 
-    private void OnEnable()
+    void Update()
     {
-        var map = inputAction.FindActionMap("Player");
-        map.Enable();
-
-        move = map.FindAction("Move");
-        look = map.FindAction("Look");
-        attack = map.FindAction("Attack");
-        reload = map.FindAction("Reload");
-
-        attack.performed += OnShoot;
-        reload.performed += OnReload;
+        Move();
+        Jump();
     }
 
-    private void OnDisable()
+    void Move()
     {
-        inputAction.FindActionMap("Player").Disable();
+        float input = Input.GetAxis("Horizontal");
+        rb.velocity = new Vector3(input * moveSpeed, rb.velocity.y, 0);
     }
 
-    private void FixedUpdate()
+    void Jump()
     {
-        if (!GameController.Instance.IsOk)
-            return;
-
-        // Movement
-        moveInput = move.ReadValue<Vector2>();
-        Vector3 moveVec = transform.right * moveInput.x + transform.forward * moveInput.y;
-        controller.Move(moveVec * moveSpeed * Time.deltaTime);
-
-        // Gravity
-        if (controller.isGrounded && velocity.y < 0)
-            velocity.y = -2f;
-        velocity.y -= gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
-
-        // Looking
-        lookInput = look.ReadValue<Vector2>() * lookSpeed;
-        xRotation -= lookInput.y;
-        xRotation = Mathf.Clamp(xRotation, -80f, 80f);
-        transform.Rotate(Vector3.up * lookInput.x);
-
-        // Respawn
-        if (transform.position.y < -10f)
-            transform.position = startPosition;
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
     }
 
-    private void OnShoot(InputAction.CallbackContext ctx)
+    void OnCollisionEnter(Collision collision)
     {
-        if (!GameController.Instance.IsOk || ammo <= 0)
-            return;
-
-        Instantiate(bulletPrefab, bulletSpawn.position, bulletSpawn.rotation);
-        ammo--;
-        Debug.Log("Bullet fired! Remaining ammo: " + ammo);
+        // Detect ground
+        if (collision.collider.CompareTag("Ground"))
+        {
+            isGrounded = true;
+        }
     }
 
-    private void OnReload(InputAction.CallbackContext ctx)
+    void OnCollisionExit(Collision collision)
     {
-        if (!GameController.Instance.IsOk)
-            return;
-
-        ammo = 12;
-        Debug.Log("Reloaded!");
+        if (collision.collider.CompareTag("Ground"))
+        {
+            isGrounded = false;
+        }
     }
 
-    private void OnControllerColliderHit(ControllerColliderHit hit)
+    void OnTriggerEnter(Collider other)
     {
-        if (hit.gameObject.name == "finalPlatform")
-            GameController.Instance.FinalPlatformReached();
+        // Hit by rotating obstacle or bullet
+        if (other.CompareTag("RotatingObstacle") || other.CompareTag("Bullet"))
+        {
+            // decrease life
+            FindObjectOfType<GameUI>().TakeDamage();
+
+            // respawn
+            respawn.Respawn();
+        }
+
+        // Reaching the goal
+        if (other.CompareTag("Goal"))
+        {
+            FindObjectOfType<GameUI>().ReachGoal();
+        }
     }
 }
