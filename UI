@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;              // ➜ added for UI support
-using UnityEngine.EventSystems;    // ➜ added to avoid input conflicts with new Input System
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class PlayerSc : MonoBehaviour
 {
@@ -40,9 +40,14 @@ public class PlayerSc : MonoBehaviour
         jump = map.FindAction("Jump");
         melee = map.FindAction("Meele");
 
+        // Sprint
         sprint.performed += ctx => { if (!hasWon) isSprinting = true; };
         sprint.canceled += ctx => { if (!hasWon) isSprinting = false; };
+
+        // Jump
         jump.performed += JumpInput;
+
+        // Melee
         melee.performed += MeleeAttack;
     }
 
@@ -60,13 +65,26 @@ public class PlayerSc : MonoBehaviour
 
     private void HandleMovement()
     {
-        moveInput = move.ReadValue<Vector2>();
+        // READ NEW INPUT SYSTEM
+        Vector2 newInput = Vector2.zero;
+        if (move != null) newInput = move.ReadValue<Vector2>();
+
+        // READ OLD INPUT SYSTEM (WASD / Arrow Keys)
+        Vector2 oldInput = new Vector2(
+            Input.GetAxisRaw("Horizontal"),
+            Input.GetAxisRaw("Vertical")
+        );
+
+        // COMBINE BOTH INPUTS
+        moveInput = newInput + oldInput;
+
         float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
         Vector3 moveDir = transform.TransformDirection(new Vector3(moveInput.x, 0, moveInput.y)) * currentSpeed;
 
+        // Gravity
         if (isGrounded && velocity.y <= 0)
         {
-            velocity.y = -1f;
+            velocity.y = -1f; // keep grounded
             animator.SetBool("Fall", false);
 
             if (isJumping)
@@ -75,17 +93,36 @@ public class PlayerSc : MonoBehaviour
         else
         {
             velocity.y -= gravity * Time.deltaTime;
+
             if (velocity.y < -0.01f)
                 animator.SetBool("Fall", true);
         }
 
+        // APPLY MOVEMENT
         charController.Move((moveDir + velocity) * Time.deltaTime);
 
+        // ANIMATION
         float forward = moveInput.y;
         float walkAmount = Mathf.Abs(moveInput.y);
+
         animator.SetFloat("Walk", walkAmount);
         animator.SetFloat("Forward", forward);
         animator.SetBool("Run", isSprinting && forward > 0.1f);
+    }
+
+    private void HandleRotation()
+    {
+        Vector2 newLook = Vector2.zero;
+        if (look != null) newLook = look.ReadValue<Vector2>();
+
+        Vector2 oldLook = new Vector2(
+            Input.GetAxis("Mouse X"),
+            Input.GetAxis("Mouse Y")
+        );
+
+        lookInput = newLook + oldLook;
+
+        transform.Rotate(0f, lookInput.x, 0f);
     }
 
     private void JumpInput(InputAction.CallbackContext context)
@@ -107,12 +144,6 @@ public class PlayerSc : MonoBehaviour
         animator.ResetTrigger("Jump");
         animator.ResetTrigger("Meele");
         animator.SetTrigger("Meele");
-    }
-
-    private void HandleRotation()
-    {
-        lookInput = look.ReadValue<Vector2>();
-        transform.Rotate(0f, lookInput.x, 0f);
     }
 
     private void Respawn()
