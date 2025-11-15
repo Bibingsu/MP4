@@ -65,62 +65,61 @@ public class PlayerSc : MonoBehaviour
 
     private void HandleMovement()
     {
-        // READ NEW INPUT SYSTEM
-        Vector2 newInput = Vector2.zero;
-        if (move != null) newInput = move.ReadValue<Vector2>();
+        // --- READ INPUT FROM NEW SYSTEM ---
+        Vector2 newInput = move != null ? move.ReadValue<Vector2>() : Vector2.zero;
 
-        // READ OLD INPUT SYSTEM (WASD / Arrow Keys)
+        // --- READ INPUT FROM OLD SYSTEM (WASD/Arrow Keys) ---
         Vector2 oldInput = new Vector2(
             Input.GetAxisRaw("Horizontal"),
             Input.GetAxisRaw("Vertical")
         );
 
-        // COMBINE BOTH INPUTS
-        moveInput = newInput + oldInput;
+        // --- PICK WHICHEVER SYSTEM IS ACTUALLY BEING USED ---
+        moveInput = newInput != Vector2.zero ? newInput : oldInput;
 
         float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
-        Vector3 moveDir = transform.TransformDirection(new Vector3(moveInput.x, 0, moveInput.y)) * currentSpeed;
 
-        // Gravity
-        if (isGrounded && velocity.y <= 0)
+        Vector3 moveDir = transform.TransformDirection(
+            new Vector3(moveInput.x, 0f, moveInput.y)
+        ) * currentSpeed;
+
+        // --- GRAVITY & JUMPING ---
+        if (isGrounded && velocity.y < 0)
         {
-            velocity.y = -1f; // keep grounded
+            velocity.y = -1f;        // Keeps grounded
             animator.SetBool("Fall", false);
-
-            if (isJumping)
-                isJumping = false;
+            isJumping = false;
         }
         else
         {
             velocity.y -= gravity * Time.deltaTime;
-
-            if (velocity.y < -0.01f)
+            if (velocity.y < -0.1f)
                 animator.SetBool("Fall", true);
         }
 
-        // APPLY MOVEMENT
-        charController.Move((moveDir + velocity) * Time.deltaTime);
+        // --- APPLY MOVEMENT ---
+        Vector3 totalMove = moveDir + new Vector3(0, velocity.y, 0);
+        charController.Move(totalMove * Time.deltaTime);
 
-        // ANIMATION
+        // --- ANIMATIONS ---
         float forward = moveInput.y;
-        float walkAmount = Mathf.Abs(moveInput.y);
-
-        animator.SetFloat("Walk", walkAmount);
-        animator.SetFloat("Forward", forward);
+        animator.SetFloat("Walk", Mathf.Abs(forward));
         animator.SetBool("Run", isSprinting && forward > 0.1f);
     }
 
     private void HandleRotation()
     {
-        Vector2 newLook = Vector2.zero;
-        if (look != null) newLook = look.ReadValue<Vector2>();
+        // New system
+        Vector2 newLook = look != null ? look.ReadValue<Vector2>() : Vector2.zero;
 
+        // Old system
         Vector2 oldLook = new Vector2(
             Input.GetAxis("Mouse X"),
             Input.GetAxis("Mouse Y")
         );
 
-        lookInput = newLook + oldLook;
+        // Prioritize whichever is active
+        lookInput = newLook != Vector2.zero ? newLook : oldLook;
 
         transform.Rotate(0f, lookInput.x, 0f);
     }
