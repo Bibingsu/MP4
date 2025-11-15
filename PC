@@ -24,8 +24,21 @@ public class PlayerController : MonoBehaviour
 
     void Move()
     {
-        float input = Input.GetAxis("Horizontal");
-        rb.velocity = new Vector3(input * moveSpeed, rb.velocity.y, 0);
+        float moveX = 0;
+
+        // A / D or Left / Right
+        if (Input.GetKey(KeyCode.A)) moveX = -1;
+        if (Input.GetKey(KeyCode.D)) moveX = 1;
+
+        // Optional: S for backwards, W for forward (Z-axis movement)
+        float moveZ = 0;
+        if (Input.GetKey(KeyCode.W)) moveZ = 1;
+        if (Input.GetKey(KeyCode.S)) moveZ = -1;
+
+        Vector3 direction = new Vector3(moveX, 0, moveZ);
+        direction.Normalize();
+
+        rb.velocity = new Vector3(direction.x * moveSpeed, rb.velocity.y, direction.z * moveSpeed);
     }
 
     void Jump()
@@ -38,34 +51,24 @@ public class PlayerController : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        // Detect ground
         if (collision.collider.CompareTag("Ground"))
-        {
             isGrounded = true;
-        }
     }
 
     void OnCollisionExit(Collision collision)
     {
         if (collision.collider.CompareTag("Ground"))
-        {
             isGrounded = false;
-        }
     }
 
     void OnTriggerEnter(Collider other)
     {
-        // Hit by rotating obstacle or bullet
         if (other.CompareTag("RotatingObstacle") || other.CompareTag("Bullet"))
         {
-            // decrease life
             FindObjectOfType<GameUI>().TakeDamage();
-
-            // respawn
             respawn.Respawn();
         }
 
-        // Reaching the goal
         if (other.CompareTag("Goal"))
         {
             FindObjectOfType<GameUI>().ReachGoal();
