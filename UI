@@ -1,170 +1,98 @@
 using UnityEngine;
-using UnityEngine.UI;
 
-public class UIManager : MonoBehaviour
+public class GameUI : MonoBehaviour
 {
-    Canvas canvas;
-    Font defaultFont;
+    string playerName = "";
+    int life = 5;
+    float timer = 0f;
 
-    void Start()
+    bool gameStarted = false;
+    bool gameOver = false;
+    bool reachedGoal = false;
+
+    void Update()
     {
-        // Load default font
-        defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-        // Create Canvas
-        GameObject canvasObj = new GameObject("GameCanvas");
-        canvas = canvasObj.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvasObj.AddComponent<CanvasScaler>();
-        canvasObj.AddComponent<GraphicRaycaster>();
-
-        // Create All Menu UI
-        CreateTitleText("Game Menu", new Vector2(0, 200));
-        CreateToggle("2 Hits", new Vector2(-150, 100), () => GameSettings.hitsToDestroy = 2, true);
-        CreateToggle("3 Hits", new Vector2(0, 100), () => GameSettings.hitsToDestroy = 3);
-        CreateToggle("4 Hits", new Vector2(150, 100), () => GameSettings.hitsToDestroy = 4);
-
-        CreateSlider("Targets: ", new Vector2(0, 20), 2, 6, (value) => GameSettings.numberOfTargets = (int)value);
-        CreateColorSlider("R", new Vector2(-200, -80), (v) => GameSettings.colorR = (int)v);
-        CreateColorSlider("G", new Vector2(0, -80), (v) => GameSettings.colorG = (int)v);
-        CreateColorSlider("B", new Vector2(200, -80), (v) => GameSettings.colorB = (int)v);
-
-        CreateButton("Reset", new Vector2(-100, -200), ResetSettings);
-        CreateButton("Set", new Vector2(100, -200), ApplySettings);
-    }
-
-    void CreateTitleText(string text, Vector2 pos)
-    {
-        GameObject obj = new GameObject(text);
-        obj.transform.SetParent(canvas.transform);
-
-        Text t = obj.AddComponent<Text>();
-        t.font = defaultFont;
-        t.text = text;
-        t.fontSize = 32;
-        t.alignment = TextAnchor.MiddleCenter;
-
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(400, 50);
-    }
-
-    void CreateToggle(string label, Vector2 pos, UnityEngine.Events.UnityAction action, bool isOn = false)
-    {
-        GameObject obj = new GameObject(label);
-        obj.transform.SetParent(canvas.transform);
-
-        Toggle toggle = obj.AddComponent<Toggle>();
-        toggle.isOn = isOn;
-        toggle.onValueChanged.AddListener((v) => { if (v) action(); });
-
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(200, 30);
-
-        // Add text
-        GameObject labelObj = new GameObject(label + " Label");
-        labelObj.transform.SetParent(obj.transform);
-        Text labelText = labelObj.AddComponent<Text>();
-        labelText.font = defaultFont;
-        labelText.text = label;
-        labelText.fontSize = 18;
-        labelText.alignment = TextAnchor.MiddleLeft;
-
-        RectTransform labelRT = labelObj.GetComponent<RectTransform>();
-        labelRT.sizeDelta = new Vector2(200, 30);
-        labelRT.anchorMin = new Vector2(0, 0);
-        labelRT.anchorMax = new Vector2(1, 1);
-        labelRT.offsetMin = new Vector2(20, 0);
-        labelRT.offsetMax = new Vector2(0, 0);
-    }
-
-    void CreateSlider(string label, Vector2 pos, int min, int max, UnityEngine.Events.UnityAction<float> action)
-    {
-        // Slider Container
-        GameObject container = new GameObject(label + " Container");
-        container.transform.SetParent(canvas.transform);
-        RectTransform rt = container.AddComponent<RectTransform>();
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(300, 50);
-
-        // Label
-        GameObject textObj = new GameObject(label);
-        textObj.transform.SetParent(container.transform);
-        Text t = textObj.AddComponent<Text>();
-        t.font = defaultFont;
-        t.text = label + min;
-        t.fontSize = 18;
-        t.alignment = TextAnchor.MiddleCenter;
-        t.rectTransform.sizeDelta = new Vector2(300, 20);
-
-        // Slider
-        GameObject sliderObj = new GameObject(label + " Slider");
-        sliderObj.transform.SetParent(container.transform);
-        Slider slider = sliderObj.AddComponent<Slider>();
-        slider.minValue = min;
-        slider.maxValue = max;
-        slider.value = min;
-        slider.wholeNumbers = true;
-        slider.onValueChanged.AddListener((v) =>
+        if (gameStarted && !gameOver)
         {
-            t.text = label + v;
-            action(v);
-        });
-
-        RectTransform sliderRT = sliderObj.GetComponent<RectTransform>();
-        sliderRT.anchoredPosition = new Vector2(0, -25);
-        sliderRT.sizeDelta = new Vector2(300, 20);
+            timer += Time.deltaTime;
+        }
     }
 
-    void CreateColorSlider(string label, Vector2 pos, UnityEngine.Events.UnityAction<float> action)
+    void OnGUI()
     {
-        CreateSlider(label + ": ", pos, 0, 255, action);
+        GUIStyle style = new GUIStyle(GUI.skin.label);
+        style.fontSize = 24;
+
+        // ------------------------
+        // START MENU (Before game)
+        // ------------------------
+        if (!gameStarted && !gameOver)
+        {
+            GUI.Label(new Rect(50, 50, 300, 40), "Enter Name:", style);
+            playerName = GUI.TextField(new Rect(50, 100, 300, 40), playerName, 30);
+
+            if (GUI.Button(new Rect(50, 160, 150, 40), "Start Game"))
+            {
+                if (playerName == "") playerName = "Player";
+                gameStarted = true;
+            }
+            return;
+        }
+
+        // ------------------------
+        // GAMEPLAY UI
+        // ------------------------
+        if (gameStarted && !gameOver)
+        {
+            GUI.Label(new Rect(50, 20, 200, 40), "Life: " + life, style);
+            GUI.Label(new Rect(250, 20, 200, 40), "Time: " + timer.ToString("F1"), style);
+        }
+
+        // ------------------------
+        // END SCREEN
+        // ------------------------
+        if (gameOver)
+        {
+            if (reachedGoal)
+            {
+                GUI.Label(new Rect(50, 100, 500, 60),
+                    playerName + " — Time: " + timer.ToString("F1"),
+                    style);
+            }
+            else
+            {
+                GUI.Label(new Rect(50, 100, 300, 60), "YOU LOSE", style);
+            }
+
+            if (GUI.Button(new Rect(50, 180, 150, 40), "Restart"))
+            {
+                // simple restart
+                UnityEngine.SceneManagement.SceneManager.LoadScene(
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+                );
+            }
+        }
     }
 
-    void CreateButton(string label, Vector2 pos, UnityEngine.Events.UnityAction action)
+    // ------------------------
+    // CALLED BY OTHER SCRIPTS
+    // ------------------------
+
+    public void TakeDamage()
     {
-        GameObject obj = new GameObject(label);
-        obj.transform.SetParent(canvas.transform);
-
-        Button btn = obj.AddComponent<Button>();
-        btn.onClick.AddListener(action);
-
-        Image img = obj.AddComponent<Image>(); // Required for button
-        img.color = Color.gray;
-
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(160, 50);
-
-        GameObject textObj = new GameObject(label + "Text");
-        textObj.transform.SetParent(obj.transform);
-        Text t = textObj.AddComponent<Text>();
-        t.font = defaultFont;
-        t.text = label;
-        t.fontSize = 20;
-        t.alignment = TextAnchor.MiddleCenter;
-        t.color = Color.white;
-
-        RectTransform textRT = textObj.GetComponent<RectTransform>();
-        textRT.anchorMin = Vector2.zero;
-        textRT.anchorMax = Vector2.one;
-        textRT.offsetMin = Vector2.zero;
-        textRT.offsetMax = Vector2.zero;
+        life--;
+        if (life <= 0)
+            GameOver(false);
     }
 
-    void ResetSettings()
+    public void ReachGoal()
     {
-        GameSettings.hitsToDestroy = 2;
-        GameSettings.numberOfTargets = 2;
-        GameSettings.colorR = 255;
-        GameSettings.colorG = 255;
-        GameSettings.colorB = 255;
-        Debug.Log("Settings Reset!");
+        GameOver(true);
     }
 
-    void ApplySettings()
+    void GameOver(bool goal)
     {
-        Debug.Log("Settings Applied!");
+        gameOver = true;
+        reachedGoal = goal;
     }
 }
