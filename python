@@ -1,0 +1,4 @@
+print("Name:")
+print("Section:")
+print("Course/Specialization:")
+print("Subject:")
