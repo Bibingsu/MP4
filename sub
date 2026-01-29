@@ -1,10 +1,14 @@
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerSc : MonoBehaviour
 {
     public float moveSpeed = 5f;
     public float mouseSensitivity = 150f;
     public Transform cameraHolder;
+
+    // ===== Respawn variables =====
+    public Vector3 respawnPoint;
+    public float fallLimit = -10f;
 
     float xRotation = 0f;
 
@@ -12,12 +16,21 @@ public class PlayerMovement : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // Set the respawn point at start
+        respawnPoint = transform.position;
     }
 
     void Update()
     {
         Move();
         Look();
+
+        // Check for falling
+        if (transform.position.y < fallLimit)
+        {
+            Respawn();
+        }
     }
 
     void Move()
@@ -39,5 +52,17 @@ public class PlayerMovement : MonoBehaviour
 
         cameraHolder.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
+    }
+
+    // ===== Respawn function =====
+    void Respawn()
+    {
+        transform.position = respawnPoint;
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
     }
 }
