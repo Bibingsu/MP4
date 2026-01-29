@@ -1,0 +1,89 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class Playersc : MonoBehaviour
+{
+    [SerializeField] private InputActionAsset inputAction;
+    [SerializeField] private CharacterController characterController;
+
+    private InputAction moveAction;
+    private InputAction lookAction;
+    private InputAction jumpAction;
+    private InputAction shootAction;
+    private InputAction changeColorAction;
+
+    [SerializeField] private Transform spawnPoint;
+    [SerializeField] private Transform firePoint;
+    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private float bulletSpeed = 20f;
+
+
+    [SerializeField] private float moveSpeed = 10f;
+    [SerializeField] private float jumpForce = 30f;
+    [SerializeField] private float gravity = -9.81f;
+    private float verticalVelocity;
+
+    private Color currentBulletColor = Color.red;
+    private void Start()
+    {
+        var playerMap = inputAction.FindActionMap("Player");
+        moveAction = playerMap.FindAction("Move");
+        lookAction = playerMap.FindAction("Look");
+        jumpAction = playerMap.FindAction("Jump");
+        shootAction = playerMap.FindAction("Attack");
+        changeColorAction = playerMap.FindAction("Interact");
+
+        jumpAction.performed += Jump_performed;
+        shootAction.performed += Shoot_performed;
+        changeColorAction.performed += ChangeColor_performed;
+
+
+        characterController = GetComponent<CharacterController>();
+    }
+
+    private void OnEnable()
+    {
+        inputAction.FindActionMap("Player").Enable();
+    }
+
+    private void OnDisable()
+    {
+        inputAction.FindActionMap("Player").Disable();
+    }
+
+    private void Jump_performed(InputAction.CallbackContext obj)
+    {
+        if (characterController.isGrounded)
+        {
+            verticalVelocity = jumpForce;
+        }
+    }
+
+    private void Shoot_performed(InputAction.CallbackContext obj)
+    {
+        if (bulletPrefab && firePoint)
+        {
+            GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+
+
+            if (bullet.TryGetComponent<Bullet>(out Bullet bulletScript))
+            {
+                bulletScript.SetColor(currentBulletColor);
+            }
+
+
+            if (bullet.TryGetComponent<Rigidbody>(out Rigidbody rb))
+            {
+                rb.linearVelocity = firePoint.forward * bulletSpeed;
+            }
+        }
+    }
+
+    private void ChangeColor_performed(InputAction.CallbackContext obj)
+    {
+        // Cycle through red -> blue -> green
+        if (currentBulletColor == Color.red) currentBulletColor = Color.blue;
+        else if (currentBulletColor == Color.blue) currentBulletColor = Color.green;
+        else currentBulletColor = Color.red;
+
+        Debug.Log("Bullet color changed to: " + currentBulletColor);
