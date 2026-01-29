@@ -17,13 +17,13 @@ public class Playersc : MonoBehaviour
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private float bulletSpeed = 20f;
 
-
     [SerializeField] private float moveSpeed = 10f;
     [SerializeField] private float jumpForce = 30f;
     [SerializeField] private float gravity = -9.81f;
     private float verticalVelocity;
 
     private Color currentBulletColor = Color.red;
+
     private void Start()
     {
         var playerMap = inputAction.FindActionMap("Player");
@@ -36,7 +36,6 @@ public class Playersc : MonoBehaviour
         jumpAction.performed += Jump_performed;
         shootAction.performed += Shoot_performed;
         changeColorAction.performed += ChangeColor_performed;
-
 
         characterController = GetComponent<CharacterController>();
     }
@@ -65,25 +64,27 @@ public class Playersc : MonoBehaviour
         {
             GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
 
-
             if (bullet.TryGetComponent<Bullet>(out Bullet bulletScript))
             {
                 bulletScript.SetColor(currentBulletColor);
             }
 
-
             if (bullet.TryGetComponent<Rigidbody>(out Rigidbody rb))
             {
-                rb.linearVelocity = firePoint.forward * bulletSpeed;
+                rb.velocity = firePoint.forward * bulletSpeed;
             }
         }
     }
 
     private void ChangeColor_performed(InputAction.CallbackContext obj)
     {
-        // Cycle through red -> blue -> green
-        if (currentBulletColor == Color.red) currentBulletColor = Color.blue;
-        else if (currentBulletColor == Color.blue) currentBulletColor = Color.green;
-        else currentBulletColor = Color.red;
+        if (currentBulletColor == Color.red)
+            currentBulletColor = Color.blue;
+        else if (currentBulletColor == Color.blue)
+            currentBulletColor = Color.green;
+        else
+            currentBulletColor = Color.red;
 
         Debug.Log("Bullet color changed to: " + currentBulletColor);
+    }
+}
