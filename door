@@ -1,0 +1,45 @@
+using UnityEngine;
+using System.Collections;
+
+public class door: MonoBehaviour
+{
+    private Renderer doorRenderer;
+
+    void Start()
+    {
+        doorRenderer = GetComponent<Renderer>();
+        StartCoroutine(ChangeColorRoutine());
+    }
+
+    IEnumerator ChangeColorRoutine()
+    {
+        while (true)
+        {
+            ChangeColor();
+            yield return new WaitForSeconds(3f);
+        }
+    }
+
+    void ChangeColor()
+    {
+        int randomColor = Random.Range(0, 3);
+
+        switch (randomColor)
+        {
+            case 0:
+                doorRenderer.material.color = Color.red;
+                break;
+            case 1:
+                doorRenderer.material.color = Color.green;
+                break;
+            case 2:
+                doorRenderer.material.color = Color.blue;
+                break;
+        }
+    }
+
+    public Color GetCurrentColor()
+    {
+        return doorRenderer.material.color;
+    }
+}
