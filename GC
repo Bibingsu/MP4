@@ -1,185 +1,168 @@
 using UnityEngine;
-using System.Collections.Generic;   
-using static UnityEngine.GraphicsBuffer;
+using System.Collections.Generic;
 
 public class GameController : MonoBehaviour
 {
+    // ---------------- MENU SETTINGS ----------------
+    int selectedTargetCount = 3;
+    bool minimapEnabled = false;
+    bool gameStarted = false;
 
-    float ScreenWidthHalf = Screen.width / 2;
-    float ScreenHeightHalf = Screen.height / 2;
+    // ---------------- GAME STATE ----------------
+    float gameTimer = 0f;
+    bool targetsSpawned = false;
+    bool finalPlatformReached = false;
+    bool allTargetsDestroyed = false;
 
-    float targetCount = 1;       
-    float targetLife = 1;        
-    string playerName = "";      
+    List<GameObject> targets = new List<GameObject>();
 
-    float red = 255;
-    float green = 255;
-    float blue = 255;
-    Color playerColor = Color.white; 
+    [SerializeField] Player player;
+    [SerializeField] GameObject targetPrefab;
 
-    bool isConfirmed = false;     
-    bool isReset = false;         
-    bool isOk = false;           
+    GameObject[] targetLoc;
 
-    bool targetsSpawned = false;  
-    bool finalPlatformReached = false; 
-    bool allTargetsDestroyed = false;  
-
-    List<GameObject> targets = new List<GameObject>(); 
-    [SerializeField] Player player;                
-    [SerializeField] GameObject targetPrefab;          
-    GameObject[] targetLoc;                            
-    private string ammoCount;                         
-
-    public bool IsOk { get => isOk; set => isOk = value; }
+    // ------------------------------------------------
 
     void Start()
     {
         targetLoc = GameObject.FindGameObjectsWithTag("LocationTarget");
-        ammoCount = $"Ammo: {player.GetAmmo()}";
     }
 
-    private void OnGUI()
+    // ------------------------------------------------
+    void OnGUI()
     {
-        if (!isConfirmed && !IsOk) 
+        GUI.backgroundColor = Color.gray;
+        GUI.contentColor = Color.white;
+
+        float boxWidth = 400;
+        float boxHeight = 300;
+
+        float boxX = (Screen.width - boxWidth) / 2;
+        float boxY = (Screen.height - boxHeight) / 2;
+
+        // ================= MAIN MENU =================
+        if (!gameStarted)
         {
-            GUI.Box(
-                new Rect(ScreenWidthHalf / 2, ScreenHeightHalf / 2 - 30, ScreenWidthHalf, ScreenHeightHalf + 60),
-                "Game Controller GUI"
+            GUI.Box(new Rect(boxX, boxY, boxWidth, boxHeight), "Main Menu");
+
+            float contentX = boxX + 40;
+            float contentY = boxY + 60;
+
+            // ----- TARGET HIT COUNT -----
+            GUI.Label(new Rect(contentX, contentY, 200, 25), "Target Hit Count");
+            contentY += 35;
+
+            if (GUI.Toggle(new Rect(contentX, contentY, 60, 25), selectedTargetCount == 2, "2"))
+                selectedTargetCount = 2;
+
+            if (GUI.Toggle(new Rect(contentX + 70, contentY, 60, 25), selectedTargetCount == 3, "3"))
+                selectedTargetCount = 3;
+
+            if (GUI.Toggle(new Rect(contentX + 140, contentY, 60, 25), selectedTargetCount == 4, "4"))
+                selectedTargetCount = 4;
+
+            // ----- MINIMAP -----
+            contentY += 60;
+            GUI.Label(new Rect(contentX, contentY, 200, 25), "Mini Map");
+            contentY += 30;
+
+            minimapEnabled = GUI.Toggle(
+                new Rect(contentX, contentY, 200, 25),
+                minimapEnabled,
+                "Enable Minimap"
             );
 
+            // ----- START BUTTON -----
+            contentY += 60;
 
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 8, 200, 30),
-                $"Target Count: {targetCount}");
-
-            targetCount = GUI.HorizontalSlider(new Rect(ScreenWidthHalf / 2 + 120, ScreenHeightHalf / 2 + 10, 200, 30),
-                targetCount, 1, 4);
-            targetCount = Mathf.Round(targetCount); 
-
-
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 40, 200, 30),
-                $"Target Life: {targetLife}");
-  
-            targetLife = GUI.HorizontalSlider(new Rect(ScreenWidthHalf / 2 + 120, ScreenHeightHalf / 2 + 42, 200, 30),
-                targetLife, 1, 3);
-            targetLife = Mathf.Round(targetLife);
-
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 72, 200, 30), "Player Name:");
-            playerName = GUI.TextField(new Rect(ScreenWidthHalf / 2 + 120, ScreenHeightHalf / 2 + 72, 200, 30),
-                playerName);
-
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 104, 300, 30), "Player Color:");
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 110, ScreenHeightHalf / 2 + 104, 50, 30), $"R:{red}");
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 170, ScreenHeightHalf / 2 + 104, 50, 30), $"G:{green}");
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 230, ScreenHeightHalf / 2 + 104, 50, 30), $"B:{blue}");
-
-
-            red = GUI.VerticalSlider(new Rect(ScreenWidthHalf / 2 + 120, ScreenHeightHalf / 2 + 130, 20, 80), red, 255, 0);
-            green = GUI.VerticalSlider(new Rect(ScreenWidthHalf / 2 + 180, ScreenHeightHalf / 2 + 130, 20, 80), green, 255, 0);
-            blue = GUI.VerticalSlider(new Rect(ScreenWidthHalf / 2 + 240, ScreenHeightHalf / 2 + 130, 20, 80), blue, 255, 0);
-            red = Mathf.Round(red);
-            green = Mathf.Round(green);
-            blue = Mathf.Round(blue);
-
-
-            isConfirmed = GUI.Button(new Rect(ScreenWidthHalf / 2 + 280, ScreenHeightHalf / 2 + 120, 100, 30), "Confirm");
-            isReset = GUI.Button(new Rect(ScreenWidthHalf / 2 + 280, ScreenHeightHalf / 2 + 165, 100, 30), "Reset");
+            if (GUI.Button(new Rect(contentX + 180, contentY, 120, 40), "Start"))
+            {
+                gameStarted = true;
+            }
         }
 
-
-        if (isConfirmed && !string.IsNullOrEmpty(playerName) && !IsOk) 
-        {
-
-            GUI.Box(new Rect(ScreenWidthHalf / 2, ScreenHeightHalf / 2 - 30, ScreenWidthHalf, ScreenHeightHalf + 30), "Confirm Details");
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 8, 300, 30), $"Player Name: {playerName}");
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 40, 300, 30), $"Target Count: {targetCount}");
-            GUI.Label(new Rect(ScreenWidthHalf / 2 + 20, ScreenHeightHalf / 2 + 72, 300, 30), $"Target Life: {targetLife}");
-
-
-            IsOk = GUI.Button(new Rect(ScreenWidthHalf / 2 + 65, ScreenHeightHalf / 2 + 140, 100, 30), "OK");
-            if (GUI.Button(new Rect(ScreenWidthHalf / 2 + 220, ScreenHeightHalf / 2 + 140, 100, 30), "Back"))
-                isConfirmed = false;
-        }
+        // ================= IN GAME UI =================
         else
         {
-            isConfirmed = false;
-        }
+            // ----- TIMER -----
+            GUI.Label(new Rect(20, 20, 200, 30),
+                "Time: " + gameTimer.ToString("F1") + "s");
 
-
-        if (isReset)
-        {
-            targetCount = 1;
-            targetLife = 1;
-            playerName = "";
-            isReset = false; 
-        }
-
-
-        if (IsOk)
-        {
-
-            playerColor = new Color(red / 255f, green / 255f, blue / 255f);
-
-            player.SetPlayerColor(playerColor);
-
+            // ----- MINIMAP DISPLAY -----
+            if (minimapEnabled)
+            {
+                GUI.Box(new Rect(Screen.width - 170, 20, 150, 150), "MiniMap");
+            }
 
             if (!targetsSpawned)
-                SpawnTargets((int)targetCount);
-            GUI.Label(new Rect(50, 20, 200, 30), playerName);
-            ammoCount = $"Ammo: {player.GetAmmo()}";
-            GUI.Label(new Rect(50, 50, 200, 30), ammoCount);
+                SpawnTargets(selectedTargetCount);
+
+            if (finalPlatformReached)
+            {
+                GUI.Label(
+                    new Rect(Screen.width / 2 - 50, Screen.height / 2, 200, 40),
+                    "YOU WIN!"
+                );
+            }
         }
-
-
-        if (finalPlatformReached)
-            GUI.Label(new Rect(ScreenWidthHalf, ScreenHeightHalf, 600, 80), "You Win!");
     }
 
-
-    void SpawnTargets(int count)
-    {
-        Debug.Log($"Spawning {count} targets...");
-        for (int i = 0; i < count; i++)
-        {
-
-            GameObject pos = targetLoc[i];
-            GameObject targetObj = Instantiate(targetPrefab, pos.transform.position, pos.transform.rotation);
-
-            targets.Add(targetObj);
-
-            Target targetSc = targetObj.GetComponent<Target>();
-            if (targetSc != null)
-                targetSc.SetLife((int)targetLife);
-        }
-        targetsSpawned = true;
-        Debug.Log($"Targets spawned: {targets.Count}");
-    }
-
-    public void RemoveFromList(GameObject removeItem)
-    {
-        targets.Remove(removeItem);
-    }
+    // ------------------------------------------------
     void Update()
     {
+        if (gameStarted)
+            gameTimer += Time.deltaTime;
+
         if (targetsSpawned)
         {
             if (targets.Count == 0)
                 allTargetsDestroyed = true;
+
             if (allTargetsDestroyed)
                 MakePlayerClimb();
         }
     }
 
+    // ------------------------------------------------
+    void SpawnTargets(int count)
+    {
+        for (int i = 0; i < count && i < targetLoc.Length; i++)
+        {
+            GameObject pos = targetLoc[i];
+            GameObject targetObj = Instantiate(
+                targetPrefab,
+                pos.transform.position,
+                pos.transform.rotation
+            );
+
+            targets.Add(targetObj);
+        }
+
+        targetsSpawned = true;
+    }
+
+    // ------------------------------------------------
+    public void RemoveFromList(GameObject removeItem)
+    {
+        targets.Remove(removeItem);
+    }
+
+    // ------------------------------------------------
     public void FinalPlatformReached()
     {
         finalPlatformReached = true;
     }
+
+    // ------------------------------------------------
     void MakePlayerClimb()
     {
         if (player != null)
         {
-            CharacterController charController = player.GetComponent<CharacterController>();
-            charController.stepOffset = 0.5f;
+            CharacterController charController =
+                player.GetComponent<CharacterController>();
+
+            if (charController != null)
+                charController.stepOffset = 0.5f;
         }
     }
 }
