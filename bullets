@@ -1,90 +1,68 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
-public class Playersc : MonoBehaviour
+public class BulletSc : MonoBehaviour
 {
-    [SerializeField] private InputActionAsset inputAction;
-    [SerializeField] private CharacterController characterController;
+    // Rigidbody component reference — used to apply physics forces to the bullet
+    [SerializeField] Rigidbody rigidBody;
 
-    private InputAction moveAction;
-    private InputAction lookAction;
-    private InputAction jumpAction;
-    private InputAction shootAction;
-    private InputAction changeColorAction;
+    // Strength of the bullet’s forward force when fired
+    [SerializeField] float force = 2000f;
 
-    [SerializeField] private Transform spawnPoint;
-    [SerializeField] private Transform firePoint;
-    [SerializeField] private GameObject bulletPrefab;
-    [SerializeField] private float bulletSpeed = 20f;
-
-    [SerializeField] private float moveSpeed = 10f;
-    [SerializeField] private float jumpForce = 30f;
-    [SerializeField] private float gravity = -9.81f;
-    private float verticalVelocity;
-
-    private Color currentBulletColor = Color.red;
-
-    private void Start()
+    // ───────────────────────────────────────────────
+    // Start() runs once when the bullet is first created (instantiated)
+    // Handles initial movement and sets a self-destruct timer
+    // ───────────────────────────────────────────────
+    void Start( )
     {
-        var playerMap = inputAction.FindActionMap("Player");
-        moveAction = playerMap.FindAction("Move");
-        lookAction = playerMap.FindAction("Look");
-        jumpAction = playerMap.FindAction("Jump");
-        shootAction = playerMap.FindAction("Attack");
-        changeColorAction = playerMap.FindAction("Interact");
+        // Apply forward velocity so the bullet moves straight ahead
+        // Vector3.forward refers to the local "forward" direction of the bullet prefab
+        rigidBody.AddRelativeForce(Vector3.forward * force);
 
-        jumpAction.performed += Jump_performed;
-        shootAction.performed += Shoot_performed;
-        changeColorAction.performed += ChangeColor_performed;
+        // Ensure the bullet is affected by physics (not locked in place)
+        rigidBody.isKinematic = false;
 
-        characterController = GetComponent<CharacterController>();
+        // Automatically destroy the bullet after 2 seconds
+        // This prevents unused bullets from staying in the scene forever
+        Destroy(gameObject, 2f);
     }
 
-    private void OnEnable()
+    // ───────────────────────────────────────────────
+    // Update() runs every frame — not used in this script
+    // Could later be used for trail effects or homing behavior
+    // ───────────────────────────────────────────────
+    void Update( )
     {
-        inputAction.FindActionMap("Player").Enable();
+        // Currently no per-frame logic needed
     }
 
-    private void OnDisable()
+    // ───────────────────────────────────────────────
+    // OnCollisionEnter() is automatically called by Unity
+    // whenever this bullet collides with another physical object (with a Collider)
+    // Handles hit detection and target interaction
+    // ───────────────────────────────────────────────
+    private void OnCollisionEnter(Collision collision)
     {
-        inputAction.FindActionMap("Player").Disable();
-    }
+        // Store the object that the bullet collided with
+        GameObject objectHit = collision.gameObject;
 
-    private void Jump_performed(InputAction.CallbackContext obj)
-    {
-        if (characterController.isGrounded)
+        // Check if the collided object exists and is tagged as "Target"
+        if (objectHit != null && objectHit.CompareTag("Target"))
         {
-            verticalVelocity = jumpForce;
-        }
-    }
+            // Get the TargetSc script component from the hit object
+            TargetSc targetSc = objectHit.GetComponent<TargetSc>( );
 
-    private void Shoot_performed(InputAction.CallbackContext obj)
-    {
-        if (bulletPrefab && firePoint)
-        {
-            GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
-
-            if (bullet.TryGetComponent<Bullet>(out Bullet bulletScript))
+            // If the target has the TargetSc script, apply effects
+            if (targetSc != null)
             {
-                bulletScript.SetColor(currentBulletColor);
-            }
+                // Deal 1 damage to the target
+                targetSc.TakeDamage(1);
 
-            if (bullet.TryGetComponent<Rigidbody>(out Rigidbody rb))
-            {
-                rb.velocity = firePoint.forward * bulletSpeed;
+                // Change its color to a random color to show it was hit
+                targetSc.ChangeToRandomColor( );
             }
         }
-    }
 
-    private void ChangeColor_performed(InputAction.CallbackContext obj)
-    {
-        if (currentBulletColor == Color.red)
-            currentBulletColor = Color.blue;
-        else if (currentBulletColor == Color.blue)
-            currentBulletColor = Color.green;
-        else
-            currentBulletColor = Color.red;
-
-        Debug.Log("Bullet color changed to: " + currentBulletColor);
+        // Destroy the bullet immediately after any collision
+        // (Prevents multiple hits or bullets bouncing around)
+        Destroy(gameObject);
     }
-}
